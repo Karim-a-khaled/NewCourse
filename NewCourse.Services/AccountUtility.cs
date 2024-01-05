@@ -15,11 +15,11 @@ namespace NewCourse.Services
     public class AccountUtility
     {
         private readonly IConfiguration _configuration;
-
         public AccountUtility(IConfiguration configuration)
         {
             _configuration = configuration;
         }
+        
         public string CreateToken(User user)
         {
             List<Claim> claims = new List<Claim>

@@ -23,17 +23,22 @@ namespace NewCourse.Services
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
         private readonly AccountUtility _accountUtility;
-        public AccountService(IConfiguration configuration, AppDbContext context, AccountUtility accountUtility)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public AccountService(IConfiguration configuration, AppDbContext context, AccountUtility accountUtility, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             _context = context;
             _accountUtility = accountUtility;
+            _httpContextAccessor = httpContextAccessor;
         }
-        public async Task<ActionResult<User>> Register(UserDto request)
+        public async Task<User> Register(UserDto request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user is not null)
+            {
                 throw new Exception("User already exist");
+            }
 
             _accountUtility.CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
             var userToAdd = new User
@@ -47,11 +52,13 @@ namespace NewCourse.Services
             await _context.SaveChangesAsync();
             return user;
         }
-        public async Task<ActionResult<string>> Login(UserDto request)
+        public async Task<string> Login(UserDto request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user is null)
+            {
                 throw new Exception("User was not found");
+            }
 
             if (!_accountUtility.VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
                 throw new Exception("Username or Password is incorrect");
@@ -66,7 +73,16 @@ namespace NewCourse.Services
 
             return token;
         }
+        public async Task<string> GetMe()
+        {
+            var user = _context.Users.FirstOrDefault(x => x.TokenExpires > DateTime.Now);
+            if (user is null)
+            {
+                throw new Exception("Token is Invalid");
+            }
 
+            return "Hello";
+        }
 
 
         public async Task<string> LogOut()
@@ -77,9 +93,10 @@ namespace NewCourse.Services
                 user.TokenExpires = DateTime.Now;
                 await _context.SaveChangesAsync();
                 _accountUtility.CreateToken(user);
+                //_httpContextAccessor.HttpContext.Session.Clear();
                 return "Signed Out Succesfuly";
             }
-            
+
             throw new Exception("Token is Not Valid");
         }
     }

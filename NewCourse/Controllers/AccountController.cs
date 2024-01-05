@@ -23,6 +23,7 @@ namespace NewCourse.API.Controllers
         [HttpGet, Authorize]
         public ActionResult<string> GetMe()
         {
+            var result = _accountService.GetMe();
             return Ok("Authorized");
         }
 
